@@ -8,8 +8,15 @@
 // GLFW    
 #include <GLFW/glfw3.h> 
 
+void drawTriangle_Buffer();
+void drawTriangle();
 
 
+
+
+void drawPoint();
+void drawcure();
+void cube();
 
 // Function prototypes    
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);

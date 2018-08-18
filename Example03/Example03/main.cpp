@@ -94,10 +94,10 @@ int main()
 	//glutDisplayFunc(ClipPlane);
 	//glutReshapeFunc(reshape);
 
-	//SolarWin();
+	SolarWin();
 	//ShoulderWin();
 
-	UnprojectWin();
+	//UnprojectWin();
 
 	glutMainLoop();
 	return 0;
