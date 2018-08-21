@@ -19,6 +19,8 @@
 //#endif
 
 /*生成纹理;*/
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
 
 //GLuint MultTexture[2];
 GLuint texture1;
@@ -34,6 +36,21 @@ glm::mat4 proj(1.0f);
 
 GLuint VBO, VAO, EBO;
 
+// camera
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+
+// timing
+float deltaTime = 0.0f;	// time between current frame and last frame
+float lastFrame = 0.0f;
+bool firstMouse = true;
+float yaw = -90.0f;	
+float pitch = 0.0f;
+float lastX = 800.0f / 2.0;
+float lastY = 600.0 / 2.0;
+float fov = 45.0f;
 
 // The MAIN function, from here we start the application and run the game loop    
 int main(void)
@@ -49,7 +66,7 @@ int main(void)
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
 	/* Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(800, 600, "Hello World", NULL, NULL);
+	window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Hello World", NULL, NULL);
 	if (!window)
 	{
 		glfwTerminate();
@@ -59,8 +76,11 @@ int main(void)
 	glfwMakeContextCurrent(window);
 	// Set the required callback functions
 	glfwSetKeyCallback(window, key_callback);
-	//glfwSetMouseButtonCallback(window, );
+	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetScrollCallback(window, scroll_callback);
 
+	/*隐藏鼠标箭头;*/
+	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	// Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
 	glewExperimental = GL_TRUE;
 
@@ -94,6 +114,9 @@ int main(void)
 		/*检查事件;*/
 		glfwPollEvents();
 
+		// input
+		processInput(window);
+
 		// Clear the colorbuffer;
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -101,7 +124,6 @@ int main(void)
 		/*渲染代码;*/
 		//drawTriangle(shader);
 		drawTriangle_MultTexture(shader);
-
 
 		/* Swap front and back buffers */
 		glfwSwapBuffers(window);
@@ -271,17 +293,6 @@ void drawTriangle_MultTexture(Shader &shader)
 	glUniform1i(glGetUniformLocation(shader.m_Program, "ourTexture2"), 1);
 	glUniform1f(glGetUniformLocation(shader.m_Program, "mixValue"), mixValue);
 
-	//glm::mat4 transx(1.0f);
-	//transx = glm::translate(transx, glm::vec3(0.5f, -0.5f, 0.0f));
-	//transx = glm::rotate(transx, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-	//glUniformMatrix4fv(glGetUniformLocation(shader.m_Program, "transform"),1,GL_FALSE,glm::value_ptr(transx));
-	//glm::mat4 modelx(1.0f);
-	//modelx = glm::rotate(modelx, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
-	//glUniformMatrix4fv(glGetUniformLocation(shader.m_Program, "model"), 1, GL_FALSE, glm::value_ptr(modelx));
-	//glUniformMatrix4fv(glGetUniformLocation(shader.m_Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-	//glUniformMatrix4fv(glGetUniformLocation(shader.m_Program, "projection"), 1, GL_FALSE, glm::value_ptr(proj));
-
-
 	glm::vec3 cubePositions[] = {
 		glm::vec3(0.0f,  0.0f,  0.0f),
 		glm::vec3(2.0f,  5.0f, -15.0f),
@@ -295,7 +306,17 @@ void drawTriangle_MultTexture(Shader &shader)
 		glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
 
-	
+
+	/*视角旋转;*/
+	float fRadius = 10.0f;
+	float CamX = fRadius*sin(glfwGetTime());
+	float CamZ = fRadius*cos(glfwGetTime());
+	glm::mat4 view_(1);  
+	//view_ = glm::lookAt(glm::vec3(CamX, 0.0f, CamZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 projection(1);
+	projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+	view_ = glm::lookAt(cameraPos, cameraPos+cameraFront, cameraUp);
+
 	for (unsigned int i = 0; i < 10; i++)
 	{
 		// Draw our first triangle
@@ -308,8 +329,9 @@ void drawTriangle_MultTexture(Shader &shader)
 		modelcx = glm::rotate(modelcx, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
 		
 		glUniformMatrix4fv(glGetUniformLocation(shader.m_Program, "model"), 1, GL_FALSE, glm::value_ptr(modelcx));
-		glUniformMatrix4fv(glGetUniformLocation(shader.m_Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(glGetUniformLocation(shader.m_Program, "projection"), 1, GL_FALSE, glm::value_ptr(proj));
+		glUniformMatrix4fv(glGetUniformLocation(shader.m_Program, "view"), 1, GL_FALSE, glm::value_ptr(view_));
+		//glUniformMatrix4fv(glGetUniformLocation(shader.m_Program, "projection"), 1, GL_FALSE, glm::value_ptr(proj));
+		glUniformMatrix4fv(glGetUniformLocation(shader.m_Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -317,37 +339,7 @@ void drawTriangle_MultTexture(Shader &shader)
 	}
 	
 
-
-	//glBindVertexArray(VAO);
-	//glDrawArrays(GL_TRIANGLES, 0, 36);
-	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	//glBindVertexArray(0);
-
-
-	//glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D, texture1);
-	//glUniform1i(glGetUniformLocation(shader.m_Program, "ourTexture1"), 0);
-
-	//glActiveTexture(GL_TEXTURE1);
-	//glBindTexture(GL_TEXTURE_2D, texture2);
-	//glUniform1i(glGetUniformLocation(shader.m_Program, "ourTexture2"), 1);
-	//glUniform1f(glGetUniformLocation(shader.m_Program, "mixValue"), mixValue);
-
-	//glm::mat4 transtwo(1.0f);
-	//float scaleAmount = fabs((float)sin(glfwGetTime()));
-
-	//transtwo = glm::translate(transtwo, glm::vec3(-0.5f, +0.5f, 0.0f));
-	//transtwo = glm::scale(transtwo, glm::vec3(scaleAmount, scaleAmount, scaleAmount));
-
-	//glUniformMatrix4fv(glGetUniformLocation(shader.m_Program, "transform"), 1, GL_FALSE, glm::value_ptr(transtwo));
-
-	//glBindVertexArray(VAO);
-	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	//glBindVertexArray(0);
-
 }
-
-
 
 
 // Is called whenever a key is pressed/released via GLFW    
@@ -369,6 +361,72 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		if (mixValue <= 0.0f)
 			mixValue = 0.0f;
 	}
+}
 
 
+void processInput(GLFWwindow *window)
+{
+	float currentFrame = glfwGetTime();
+	deltaTime = currentFrame - lastFrame;
+	lastFrame = currentFrame;
+
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+
+	float cameraSpeed = 2.5 * deltaTime;
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		cameraPos += cameraSpeed * cameraFront;
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		cameraPos -= cameraSpeed * cameraFront;
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+}
+
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+	lastX = xpos;
+	lastY = ypos;
+
+	float sensitivity = 0.1f; // change this value to your liking
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
+
+	yaw += xoffset;
+	pitch += yoffset;
+
+	// make sure that when pitch is out of bounds, screen doesn't get flipped
+	if (pitch > 89.0f)
+		pitch = 89.0f;
+	if (pitch < -89.0f)
+		pitch = -89.0f;
+
+	glm::vec3 front;
+	front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	front.y = sin(glm::radians(pitch));
+	front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	cameraFront = glm::normalize(front);
+
+}
+
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	if (fov >= 1.0f && fov <= 45.0f)
+		fov -= yoffset;
+	if (fov <= 1.0f)
+		fov = 1.0f;
+	if (fov >= 45.0f)
+		fov = 45.0f;
 }

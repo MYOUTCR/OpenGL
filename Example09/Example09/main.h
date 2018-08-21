@@ -23,8 +23,9 @@ void drawTriangle_Mat();
 
 void drawTriangle_MultTexture();
 void drawTriangle_MultTexture(Shader &shader);
-
-
+void processInput(GLFWwindow *window);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 // Function prototypes    
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
